@@ -108,5 +108,23 @@ app.post("/api/sweets/:id/restock", authMiddleware, async (req: AuthRequest, res
   sweet.quantity += quantity;
   res.status(200).json(sweet);
 });
+// Register endpoint
+app.post("/api/auth/register", async (req, res) => {
+  const { email, password, role } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password required" });
+  }
+
+  const hashed = await bcrypt.hash(password, 10);
+  const user = await User.create({ email, password: hashed, role: role || "USER" });
+
+  const token = jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET || "dev_secret",
+    { expiresIn: "1h" }
+  );
+
+  res.status(201).json({ token });
+});
 
 export default app;
