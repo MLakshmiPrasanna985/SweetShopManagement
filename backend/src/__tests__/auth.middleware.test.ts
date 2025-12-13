@@ -1,6 +1,8 @@
 import request from "supertest";
 import jwt from "jsonwebtoken";
 import app from "../app";
+import Sweet from "../models/Sweet";
+
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 
