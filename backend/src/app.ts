@@ -1,8 +1,10 @@
 import express from "express";
-import { loginUser } from "./services/auth.service";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "./models/User";
+import Sweet from "./models/Sweet";
+import { loginUser } from "./services/auth.service";
+import { authMiddleware, AuthRequest } from "./middleware/auth.middleware";
 
 const app = express();
 app.use(express.json());
@@ -44,6 +46,16 @@ app.post("/api/auth/login", async (req, res) => {
   } catch {
     res.status(401).json({ error: "Invalid credentials" });
   }
+});
+
+// 🔐 Protected example route
+app.get("/api/protected", authMiddleware, (req: AuthRequest, res) => {
+  res.json({ userId: req.user!.id });
+});
+// List sweets (public)
+app.get("/api/sweets", async (_req, res) => {
+  const sweets = await Sweet.findAll();
+  res.json(sweets);
 });
 
 export default app;
