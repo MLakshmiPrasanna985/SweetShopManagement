@@ -14,20 +14,44 @@ afterAll(async () => {
 });
 
 describe("POST /api/auth/login", () => {
-  it("should login user and return JWT", async () => {
-    const hashedPassword = await bcrypt.hash("password123", 10);
+  beforeEach(async () => {
+    await User.deleteMany({});
+  });
 
+  it("should return 401 if user does not exist", async () => {
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "nouser@test.com", password: "pass123" });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: "Invalid credentials" });
+  });
+
+  it("should return 401 if password is incorrect", async () => {
+    const hashed = await bcrypt.hash("correctpass", 10);
     await User.create({
-      email: "login@test.com",
-      password: hashedPassword,
+      email: "test@test.com",
+      password: hashed,
     });
 
     const res = await request(app)
       .post("/api/auth/login")
-      .send({
-        email: "login@test.com",
-        password: "password123",
-      });
+      .send({ email: "test@test.com", password: "wrongpass" });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: "Invalid credentials" });
+  });
+
+  it("should return JWT token for valid credentials", async () => {
+    const hashed = await bcrypt.hash("password123", 10);
+    await User.create({
+      email: "test@test.com",
+      password: hashed,
+    });
+
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "test@test.com", password: "password123" });
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty("token");

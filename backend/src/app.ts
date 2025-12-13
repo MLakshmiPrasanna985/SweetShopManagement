@@ -1,4 +1,5 @@
 import express from "express";
+import { loginUser } from "./services/auth.service";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "./models/User";
@@ -6,53 +7,43 @@ import User from "./models/User";
 const app = express();
 app.use(express.json());
 
-// Health check
-app.get("/health", (req, res) => {
+// Health
+app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-// Register endpoint
+// Register
 app.post("/api/auth/register", async (req, res) => {
   const { email, password } = req.body;
-
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password required" });
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const user = new User({ email, password: hashedPassword });
-  await user.save();
+  const hashed = await bcrypt.hash(password, 10);
+  const user = await User.create({ email, password: hashed });
 
   const token = jwt.sign(
     { id: user._id },
-    process.env.JWT_SECRET || "secret",
+    process.env.JWT_SECRET || "dev_secret",
     { expiresIn: "1h" }
   );
 
   res.status(201).json({ token });
 });
 
-// ✅ Login endpoint (MINIMAL implementation)
+// Login
 app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
-
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(401).json({ error: "Invalid credentials" });
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password required" });
   }
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    return res.status(401).json({ error: "Invalid credentials" });
+  try {
+    const token = await loginUser(email, password);
+    res.json({ token });
+  } catch {
+    res.status(401).json({ error: "Invalid credentials" });
   }
-
-  const token = jwt.sign(
-    { id: user._id },
-    process.env.JWT_SECRET || "secret",
-    { expiresIn: "1h" }
-  );
-
-  res.json({ token });
 });
 
 export default app;
